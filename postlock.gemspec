@@ -7,17 +7,16 @@ require "postlock/version"
 Gem::Specification.new do |s|
   s.name        = "postlock"
   s.version     = Postlock::VERSION
-  s.authors     = ["TODO: Your name"]
-  s.email       = ["TODO: Your email"]
-  s.homepage    = "TODO"
-  s.summary     = "TODO: Summary of Postlock."
-  s.description = "TODO: Description of Postlock."
+  s.authors     = ["Postlock.com"]
+  s.email       = ["contact@postlock.com"]
+  s.homepage    = "http://www.postlock.com"
+  s.summary     = "Deliver important documents to your employees and clients"
+  s.description = "Learn more at http://www.postlock.com"
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc"]
   s.test_files = Dir["test/**/*"]
 
-  s.add_dependency "rails", "~> 4.0.0"
-  s.add_dependency "oauth2"
+  s.add_dependency "oauth2", "~> 0.9.2"
 
   s.add_development_dependency "sqlite3"
 end
