@@ -7,14 +7,9 @@ module Postlock
   PRODUCTION_SERVER_URL = 'https://postlock.herokuapp.com'
 
   class Document < ApiRecord::Base
-    attributes :description, :content_type, :content_length, :content, :mailing
+    attributes :mailing_id, :mailing, :description, :content_type, :content_length, :content
     collection_path 'documents'
     values_key :document
-
-    def attributes_hash(options = {})
-      (options[:except] ||= []) << :content
-      super(options).merge(content: Base64.encode64(content))
-    end
 
     def read_only_attributes
       [:mailing]
@@ -30,7 +25,7 @@ module Postlock
   end
 
   class Mailing < ApiRecord::Base
-    attributes :batch_id, :batch_code, :recipient_id, :recipient, :subject, :delivery_status, :delivered_at, :read_status, :read_at, :message, :documents
+    attributes :batch_id, :recipient_id, :recipient, :subject, :delivery_status, :delivered_at, :read_status, :read_at, :message, :documents
     collection_path 'mailings'
     values_key :mailing
     has_many :documents, Document
@@ -49,12 +44,14 @@ module Postlock
     end
 
     def read_only_attributes
-      [:batch_id, :recipient, :delivery_status, :delivered_at, :read_status, :read_at, :documents]
+      read_onlies = [:recipient, :delivery_status, :delivered_at, :read_status, :read_at, :documents].tap do |ro|
+        ro << :batch_id if new_record?
+      end
     end
   end
 
   class Recipient < ApiRecord::Base
-    attributes :name, :email, :is_connected
+    attributes :name, :email, :is_connected, :lookup_key
     collection_path 'recipients'
     values_key :recipient
     has_many :mailings, Mailing
@@ -64,8 +61,8 @@ module Postlock
     end
   end
 
-  class Batch < ApiRecord::ReadOnlyDeletable
-    attributes :batch_code, :status, :mailings
+  class Batch < ApiRecord::Base
+    attributes :delivery_status, :mailings
     collection_path 'batches'
     values_key :batch
 
@@ -78,11 +75,13 @@ module Postlock
     end
 
     def read_only_attributes
-      [:batch_code, :status, :mailings]
+      [:delivery_status, :mailings]
     end
   end
 
   class Postlock
+    attr_accessor :access_token
+
     def initialize(client_id, client_secret, redirect_uri, options = {})
       @server_url = case (options[:mode] || :production).to_sym
         when :local then LOCAL_SERVER_URL
@@ -94,6 +93,18 @@ module Postlock
 
     def login(username, password)
       @api = @client.password.get_token(username, password)
+    end
+
+    {
+      recipients: Recipient,
+      batches: Batch#,
+      # security_questions: SecurityQuestion
+    }.each do |association_name, element_class|
+      attribute_name = "_#{association_name}"
+      attr_reader attribute_name
+      define_method(association_name) do
+        ApiRecord::ArrayWrapper.new @api, element_class, url: "api/v1/#{association_name}"
+      end
     end
   end
 end

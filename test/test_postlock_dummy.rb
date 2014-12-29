@@ -12,7 +12,7 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
   end
 
   test "batch id" do
-    assert_equal nil, Postlock::Batch.new(nil, batch_code: 12345).id
+    assert_equal nil, Postlock::Batch.new(nil).id
   end
 
   test "batch new" do
@@ -20,7 +20,6 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
     assert_equal Postlock::Batch, mb.class
     assert_equal nil, mb.id
     mb.assign_read_only 'batch_code' => 12345
-    assert_equal 12345, mb.batch_code
   end
 
   test "batch member_path" do
@@ -35,14 +34,14 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
     mbs = Postlock::Batch.all self
     assert_request :get, 'api/v1/batches', {}
     mb = mbs.first
-    assert_equal [1, '12345'], [mb.id, mb.batch_code]
+    assert_equal 1, mb.id
   end
 
   test "batch find" do
     respond_with object_response(batch_attributes, 'batch')
     mb = Postlock::Batch.find self, 1
     assert_request :get, 'api/v1/batches/1', {}
-    assert_equal [1, '12345'], [mb.id, mb.batch_code]
+    assert_equal 1, mb.id
   end
 
   test "recipient" do
@@ -55,14 +54,16 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
   test "create recipient" do
     respond_with object_response(recipient_attributes, 'recipient')
     recipient = Postlock::Recipient.create self, recipient_attributes
-    assert_request :post, 'api/v1/recipients', recipient: {name: recipient_attributes['name'], email: recipient_attributes['email']}
+    assert_request :post, 'api/v1/recipients', recipient: {name: recipient_attributes['name'], email: recipient_attributes['email'], lookup_key: recipient_attributes['lookup_key']}
   end
 
   test "mailing" do
     respond_with object_response(recipient_attributes, 'recipient')
     r = Postlock::Recipient.create self, recipient_attributes
+    respond_with object_response(batch_attributes, 'batch')
+    batch = Postlock::Batch.create self
     respond_with object_response(mailing_attributes, 'mailing')
-    mailing = Postlock::Mailing.create self, mailing_attributes.merge('recipient_id' => r.id, 'batch_code' => '12345')
+    mailing = Postlock::Mailing.create self, mailing_attributes.merge('recipient_id' => r.id, 'batch_id' => batch.id)
     assert_equal 'api/v1/mailings/1', mailing.member_path
     respond_with object_response(batch_attributes, 'batch')
     assert mailing.batch
@@ -86,7 +87,7 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
   end
 
   def _batch_attributes
-    {'id' => 1, 'batch_code' => '12345', 'status' => 'pending'}
+    {'id' => 1, 'delivery_status' => 'pending'}
   end
 
   def batch_attributes
@@ -98,7 +99,7 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
   end
 
   def _recipient_attributes
-    {'id' => 1, 'name' => 'recipient name', 'email' => 'recipient@example.com'}
+    {'id' => 1, 'name' => 'recipient name', 'email' => 'recipient@example.com', 'lookup_key' => 'abc123'}
   end
 
   def recipient_attributes
@@ -110,7 +111,7 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
   end
 
   def _mailing_attributes
-    {'id' => 1, 'batch_code' => '12345', 'recipient_id' => 1, 'recipient' => _recipient_attributes, 'message' => 'body text', 'delivered_at' => DateTime.now}
+    {'id' => 1, 'recipient_id' => 1, 'recipient' => _recipient_attributes, 'message' => 'body text', 'delivered_at' => DateTime.now}
   end
 
   def mailing_attributes

@@ -26,14 +26,14 @@ module ApiRecord
       def request(method, path, params)
         @request_method = method
         @request_path = path
-        @request_params = params[:params] || {}
+        @request_params = params[:body] || {}.to_json
         return self
       end
 
       def assert_request method, path, params
         assert_equal method, @request_method
         assert_equal path, @request_path
-        assert_equal params, @request_params
+        assert_equal params.to_json, @request_params
       end
 
       def respond_with(desired_response)

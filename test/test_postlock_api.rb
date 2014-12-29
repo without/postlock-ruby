@@ -40,11 +40,12 @@ class PostlockApitest < ActiveSupport::TestCase
   end
 
   test "create mailing with batch" do
+    batch = @@postlock.batches.create
     create_recipient do |recip|
-      create_mailing(mailing_attributes(recip).merge(batch_code: '12345')) do |mailing|
-        assert_equal '12345', mailing.batch_code
+      create_mailing(mailing_attributes(recip).merge(batch_id: batch.id)) do |mailing|
         assert mailing.batch_id
-        assert_equal '12345', mailing.batch.batch_code
+        assert_equal batch.id, mailing.batch_id
+        assert_equal batch.id, mailing.batch.id
       end
     end
   end
@@ -66,7 +67,7 @@ class PostlockApitest < ActiveSupport::TestCase
 
   def create_recipient(attributes = nil)
     attributes ||= recipient_attributes
-    recipient = Postlock::Recipient.create @@api, attributes
+    recipient = @@postlock.recipients.create attributes
     begin
       yield recipient
     ensure
@@ -76,7 +77,8 @@ class PostlockApitest < ActiveSupport::TestCase
   end
 
   def create_mailing(attributes)
-    mailing = Postlock::Mailing.create @@api, attributes
+    recipient = @@postlock.recipients.find attributes.delete(:recipient_id)
+    mailing = recipient.mailings.create attributes
     begin
       yield mailing
     ensure

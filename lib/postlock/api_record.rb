@@ -16,6 +16,10 @@ module ApiRecord
       element_class.get_all(@token, url)
     end
 
+    def find(id)
+      element_class.find(@token, id)
+    end
+
     def [](*args)
       offset, count = case
         when args.length == 1 && (index = args.first).is_a?(Integer)
@@ -38,7 +42,7 @@ module ApiRecord
       all.map &block
     end
 
-    def create(attributes)
+    def create(attributes = {})
       element_class.create(@token, attributes, url)
     end
   end
@@ -61,12 +65,13 @@ module ApiRecord
       values = [values] unless values.respond_to? :each
       values.each do |v|
         attributes v
-        attr_accessor "_#{v}"
+        attribute_name = "_#{v}"
+        attr_accessor attribute_name
         define_method(v) do
-          ArrayWrapper.new @token, element_class, send("_#{v}")
+          ArrayWrapper.new @token, element_class, send(attribute_name)
         end
         define_method("#{v}=") do |value|
-          send "_#{v}=", value
+          send "#{attribute_name}=", value
         end
       end
     end
@@ -121,7 +126,7 @@ module ApiRecord
     def self.member_path(id)
       "#{collection_path}/#{id}"
     end
-    
+
     def collection_path
       self.class.collection_path
     end
@@ -207,6 +212,10 @@ module ApiRecord
   class Base < ReadOnlyDeletable
     def self.create(token, values_hash = {}, path = nil)
       new(token, values_hash).tap {|m| m.save(path) }
+    end
+
+    def new_record?
+      !id.nil?
     end
 
     def save(path = nil)
