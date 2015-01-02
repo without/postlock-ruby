@@ -50,15 +50,32 @@ module Postlock
     end
   end
 
+  class SecurityAnswer < ApiRecord::Base
+    attributes :security_question_id, :security_question, :answer
+    collection_path 'security_answers'
+    values_key :security_answer
+
+    def read_only_attributes
+      [:security_question]
+    end
+  end
+
   class Recipient < ApiRecord::Base
     attributes :name, :email, :is_connected, :lookup_key
     collection_path 'recipients'
     values_key :recipient
     has_many :mailings, Mailing
+    has_many :security_answers, SecurityAnswer
 
     def read_only_attributes
-      [:mailings, :is_connected]
+      [:mailings, :security_answers, :is_connected]
     end
+  end
+
+  class SecurityQuestion < ApiRecord::Base
+    attributes :question
+    collection_path 'security_questions'
+    values_key :security_question
   end
 
   class Batch < ApiRecord::Base
@@ -79,7 +96,7 @@ module Postlock
     end
   end
 
-  class Postlock
+  class Service
     attr_accessor :access_token
 
     def initialize(client_id, client_secret, redirect_uri, options = {})
@@ -97,13 +114,13 @@ module Postlock
 
     {
       recipients: Recipient,
-      batches: Batch#,
-      # security_questions: SecurityQuestion
+      batches: Batch,
+      security_questions: SecurityQuestion
     }.each do |association_name, element_class|
       attribute_name = "_#{association_name}"
       attr_reader attribute_name
       define_method(association_name) do
-        ApiRecord::ArrayWrapper.new @api, element_class, url: "api/v1/#{association_name}"
+        ApiRecord::ArrayWrapper.new @api, element_class, 'url' => "api/v1/#{association_name}"
       end
     end
   end

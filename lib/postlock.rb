@@ -1,3 +1,3 @@
 module Postlock
-  require 'postlock/postlock'
+  require File.expand_path('../postlock/postlock', __FILE__)
 end

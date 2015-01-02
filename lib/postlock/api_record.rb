@@ -12,6 +12,10 @@ module ApiRecord
       self.length = array_hash['count']
     end
 
+    def length
+      @length || all.length
+    end
+
     def all
       element_class.get_all(@token, url)
     end
@@ -23,7 +27,7 @@ module ApiRecord
     def [](*args)
       offset, count = case
         when args.length == 1 && (index = args.first).is_a?(Integer)
-          [index, 1]
+          return all[index]
         when args.length == 1 && (range = args.first).is_a?(Range)
           [range.first, range.last - range.first + 1]
         when args.length == 2
@@ -32,6 +36,14 @@ module ApiRecord
           raise InvalidRangeError.new("Invalid range arguments: #{args}")
       end
       all[offset, count]
+    end
+
+    def first
+      self[0]
+    end
+
+    def last
+      self[-1]
     end
 
     def each(&block)
@@ -61,18 +73,15 @@ module ApiRecord
 
     attributes :id
 
-    def self.has_many(values, element_class)
-      values = [values] unless values.respond_to? :each
-      values.each do |v|
-        attributes v
-        attribute_name = "_#{v}"
-        attr_accessor attribute_name
-        define_method(v) do
-          ArrayWrapper.new @token, element_class, send(attribute_name)
-        end
-        define_method("#{v}=") do |value|
-          send "#{attribute_name}=", value
-        end
+    def self.has_many(relation_name, element_class)
+      attributes relation_name
+      attribute_name = "_#{relation_name}"
+      attr_accessor attribute_name
+      define_method(relation_name) do
+        ArrayWrapper.new @token, element_class, send(attribute_name) || {'url' => "/#{member_path}/#{relation_name}"}
+      end
+      define_method("#{relation_name}=") do |value|
+        send "#{attribute_name}=", value
       end
     end
 

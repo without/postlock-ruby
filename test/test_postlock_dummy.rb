@@ -48,7 +48,7 @@ class PostlockDummyTest < ApiRecord::Dummy::TestCase
     respond_with object_response(recipient_attributes, 'recipient')
     recipient = Postlock::Recipient.create self
     assert_equal 'api/v1/recipients/1', recipient.member_path
-    assert_equal [:mailings, :is_connected], recipient.read_only_attributes
+    assert_equal [:mailings, :security_answers, :is_connected], recipient.read_only_attributes
   end
 
   test "create recipient" do
